@@ -1,0 +1,12 @@
+services:
+  tarrow-test-db:
+    image: postgres:14
+    ports:
+      - "35432:5432"
+    environment:
+      POSTGRES_USER: tarrow-dev
+      POSTGRES_PASSWORD: tarrow-dev
+      POSTGRES_DB: tarrow-local-db
+    volumes:
+      - ~/.tarrow-dev:/var/lib/postgresql/data
+
