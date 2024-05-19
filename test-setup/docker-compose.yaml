@@ -3,6 +3,11 @@ services:
     image: postgres:14
     ports:
       - "35431:5432"
+    healthcheck:
+      test: pg_isready -U tarrow-dev -d tarrow-test-db
+      interval: 1s
+      timeout: 10s
+      retries: 3
     environment:
       POSTGRES_USER: tarrow-dev
       POSTGRES_PASSWORD: tarrow-dev
