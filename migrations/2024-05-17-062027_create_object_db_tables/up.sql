@@ -1,4 +1,4 @@
-CREATE TABLE tarrow_leaf_objects (
+CREATE TABLE blobs (
     id BIGSERIAL PRIMARY KEY,
     content_address_sha256 BYTEA UNIQUE,
     content BYTEA NOT NULL,

@@ -1,1 +1,1 @@
-DROP TABLE tarrow_leaf_objects;
+DROP TABLE IF EXISTS blobs;
