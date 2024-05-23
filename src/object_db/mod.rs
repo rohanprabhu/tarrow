@@ -1,3 +1,3 @@
 pub mod object_db;
-mod models;
+pub mod models;
 mod errors;

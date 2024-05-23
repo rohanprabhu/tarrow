@@ -1,8 +1,23 @@
 #[cfg(test)]
 mod tests {
-    use diesel::{QueryableByName, RunQueryDsl, sql_query};
+    use std::sync::Mutex;
+    use diesel::{PgConnection, QueryableByName, RunQueryDsl, sql_query};
     use diesel::sql_types::Integer;
-    use crate::tests::common_setup::common::get_common_testing_context;
+    use serde_json::{Map, Value};
+    use crate::object_db::models::StoreObjectRequest;
+    use crate::object_db::object_db::ObjectDb;
+    use crate::tests::common_setup::common::{get_common_testing_context, init_test, TestingContext};
+
+    trait UnwrapPgConn<'a> {
+        fn get_pg_conn(&self) -> &'a mut PgConnection;
+    }
+
+    impl <'a> UnwrapPgConn<'a> for &Mutex<TestingContext> {
+        fn get_pg_conn(&self) -> &'a mut PgConnection {
+            todo!();
+            //self.lock().unwrap().pg_conn()
+        }
+    }
 
     #[tokio::test]
     async fn test_db_should_connect() {
@@ -22,5 +37,21 @@ mod tests {
             .unwrap();
 
         println!("Result {:?}", result);
+    }
+
+    #[tokio::test]
+    async fn insert_blob() {
+        init_test();
+        let common_context = get_common_testing_context()
+            .await;
+
+        let object_db = ObjectDb {};
+        let result = object_db.store_object(
+            common_context.lock().unwrap().pg_conn(),
+            &StoreObjectRequest {
+                object_data: String::from("Hello World!!").into_bytes(),
+                metadata: Value::Object(Map::new())
+            }
+        ).unwrap();
     }
 }

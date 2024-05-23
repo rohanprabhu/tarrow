@@ -24,6 +24,10 @@ pub mod common {
         pub static ref TEST_DB_PARAMS: OnceCell<Mutex<TestingContext>> = OnceCell::new();
     }
 
+    pub fn init_test() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+
     pub async fn get_common_testing_context() -> &'static Mutex<TestingContext> {
         TEST_DB_PARAMS.get_or_init(|| async {
             let database_url = String::from(

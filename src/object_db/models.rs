@@ -1,8 +1,8 @@
 pub struct StoreObjectRequest {
-    object_data: Vec<u8>,
-    metadata: serde_json::Value
+    pub object_data: Vec<u8>,
+    pub metadata: serde_json::Value
 }
 
 pub struct StoredObject {
-    content_address_sha256: [u8; 32],
+    pub content_address_sha256: [u8; 32],
 }

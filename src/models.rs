@@ -7,7 +7,7 @@ pub struct DataBlob<'a> {
 }
 
 pub enum TreeEntry<'a> {
-    Tree(TreeEntry<'a>),
+    Tree(Box<TreeEntry<'a>>),
     Blob(DataBlob<'a>)
 }
 
@@ -16,7 +16,7 @@ pub struct StorableTarrowTree<'a> {
 }
 
 pub struct TarrowTree<'a> {
-    pub entries: Vec<(String, TreeEntry<'a>)>
+    pub entries: Vec<(String, Box<TreeEntry<'a>>)>
 }
 
 struct TarrowRef {
