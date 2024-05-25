@@ -1,7 +1,9 @@
 use std::cmp::{max, min};
-use diesel::{insert_into, PgConnection, RunQueryDsl};
+use diesel::{insert_into, PgConnection, QueryResult, RunQueryDsl};
+use diesel::result::{DatabaseErrorKind, Error};
 use sha2::{Digest, Sha256};
 use log::debug;
+use crate::object_db::errors::ObjectStorageError::ObjectCollisionError;
 use crate::object_db::models::{StoredObject, StoreObjectRequest};
 use crate::schema::blobs::dsl::blobs;
 
@@ -27,7 +29,7 @@ fn sha_256(content: &Vec<u8>) -> Result<Vec<u8>, anyhow::Error> {
 }
 
 impl ObjectDb {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {}
     }
 
@@ -43,16 +45,43 @@ impl ObjectDb {
             &(store_object.object_data[0 .. min(50, store_object.object_data.len() - 1)])
         );
 
-        insert_into(blobs)
+        let db_store_result = insert_into(blobs)
             .values(record_models::BlobRecord {
                 content: &(store_object.object_data),
                 content_address_sha256
             })
-            .execute(pg_connection)?;
+            .execute(pg_connection);
 
+        match db_store_result {
+            Ok(_) => {
+                Ok(StoredObject {
+                    content_address_sha256: content_address_sha256.as_slice().try_into()?
+                })
+            }
 
-        Ok(StoredObject {
-            content_address_sha256: content_address_sha256.as_slice().try_into()?
-        })
+            // TODO - Is there a better way to write multi-match statements?
+            Err(err) => {
+                // EDU - Removing the '&' fails - seems like a very common error with the borrow
+                // checker. While it is obvious that we are borrowing instead of a move in the match
+                // arms, but the error specifically shows up only when we use error_info - if
+                // we somehow skip it, then even without borrowing `err`, a partial move does not
+                // occur - which is fairly curious...
+                match &err {
+                    Error::DatabaseError(database_error_kind, error_info) => {
+                        match database_error_kind {
+                            DatabaseErrorKind::UniqueViolation => {
+                                // TODO - Check if the constraint name is correct
+                                Err(anyhow::Error::new(ObjectCollisionError {
+                                    conflicting_content_sha256: content_address_sha256.as_slice()
+                                        .try_into()?
+                                }))
+                            }
+                            _ => Err(anyhow::Error::new(err))
+                        }
+                    }
+                    _ => Err(anyhow::Error::new(err))
+                }
+            }
+        }
     }
 }
