@@ -4,3 +4,4 @@ mod object_db;
 mod models;
 mod tarrow;
 mod tree_db;
+mod core;

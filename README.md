@@ -29,19 +29,18 @@ fn main() -> Result<()> {
    // Add a file 'README.md', and 'src/script.js'. Delete the directory 'tmp' and 
    // the file 'src/temp.js'
    //
-   // Note - Tarrow::add and Tarrow::remove can be used in place of `!` and `-` respectively
    let tarrow_tree = tarrow.store_tree(TarrowRef::from("main"), TarrowTree::new([
-      !("README.md", Tarrow::blob_from_string("Initial content of README.md")),
-      !("src", TarrowTree::new([
-         !("script.js", fs::read_to_string("./script.js")),
-         -("temp.js")
-      ])),
-      -("tmp"),
+      Tarrow::add(("README.md", Tarrow::blob_from_string("Initial content of README.md"))),
+      Tarrow::within(("src", TarrowTree::new([
+         Tarrow::add(tarrow_entry("script.js", fs::read_to_string("./script.js"))),
+         Tarrow::remove("temp.js")
+      ]))),
+      Tarrow::remove("tmp"),
    ]));
    
    // Update 'README.md`
    let tarrow_tree_revised = tarrow.store_tree(TarrowRef::from("main"), TarrowTree::new([
-      !("README.md", Tarrow::blob_from_string("Updated content of README.md"))
+      Tarrow::remove("README.md", Tarrow::blob_from_string("Updated content of README.md"))
    ]));
    
    println!("Old revision - {:?}", &tarrow_tree.content_address_sha256);
@@ -65,7 +64,7 @@ fn main() -> Result<()> {
    // Any of the following will output 'Initial content of README.md'
    //    Get the previous value of 'README.md' by referencing a delta for a ref
    //    Both methods should be supported:
-   //         TarrowRef::from("main@1")
+   //         TarrowRef::from("main~1")
    //         TarrowRef::from("main").before(1)
    String::from(
       tarrow.get_node_from_ref(TarrowRef::from("main").before(1), "README.md")
@@ -90,7 +89,14 @@ fn main() -> Result<()> {
    itself. What this would mean is that after a specific final version, all future versions of 
    tarrow will aim for backward compatibility of the table schema, constraints, naming, etc. Any 
    direct queries to the database skipping any library methods will be entirely supported.
-2. Tarrow largely uses the Git ObjectDb and Tree model for storing versions of data blobs, 
+2. Be transactional-optional - by using refs as the main mechanism for referencing points of 
+   storage, Tarrow aims to write data with integrity without requiring database transactions. 
+   Transactions may still be used (while consuming the schema as part of the API) by the 
+   application, but not using transaction guarantees that any tree write will occur atomically, 
+   when seeking data from a ref or a content address.
+   1. The database may contain stray tree nodes which are unreachable in case of tree updates 
+      that errored out during the operation, which might need to be garbage collected.
+3. Tarrow largely uses the Git ObjectDb and Tree model for storing versions of data blobs, 
    with some deviations:
    1. Tarrow does not store tree entries in the ObjectDb - Tree and Tree Entries are stored in 
       their dedicated tables
@@ -105,11 +111,11 @@ fn main() -> Result<()> {
       create issues in terms of extending the functionality of Tarrow and this view is 
       largely subject to revision.
    5. Tarrow simply supports refs, and refs directly point to trees. A reflog is supported
-3. Tarrow intends to support multiple SQL databases
+4. Tarrow intends to support multiple SQL databases
    1. Tarrow internally uses Diesel for all storage, so it certainly should be possible to not 
       restrict the storage backend to be Postgres. However, the first mature version that will 
       include db schema as part of the public API will only consider Postgres
    2. There is no expectation of the SQL schema being part of the public API to be dialect-agnostic
-4. Content addresses are always typed as `[u8; 32]` (and internally as `Vec<u8>` before 
+5. Content addresses are always typed as `[u8; 32]` (and internally as `Vec<u8>` before 
    validations checks are performed) - the responsibility of converting it to a display-friendly 
    format (usually a hex-encoded string) lies with the consuming client.

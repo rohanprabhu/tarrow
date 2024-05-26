@@ -3,19 +3,21 @@ use diesel::{insert_into, PgConnection, QueryResult, RunQueryDsl};
 use diesel::result::{DatabaseErrorKind, Error};
 use sha2::{Digest, Sha256};
 use log::debug;
+use crate::core::types::ContentAddress;
 use crate::object_db::errors::ObjectStorageError::ObjectCollisionError;
 use crate::object_db::models::{StoredObject, StoreObjectRequest};
 use crate::schema::blobs::dsl::blobs;
 
 mod record_models {
     use diesel::{Insertable, Queryable};
+    use crate::core::types::ContentAddressRaw;
     use crate::schema::blobs;
 
     #[derive(Insertable, Queryable)]
     #[diesel(table_name = blobs)]
     pub struct BlobRecord<'a> {
-        pub content_address_sha256: &'a Vec<u8>,
-        pub content: &'a Vec<u8>,
+        pub content_address_sha256: &'a ContentAddressRaw,
+        pub content: &'a ContentAddressRaw
     }
 }
 
@@ -31,6 +33,13 @@ fn sha_256(content: &Vec<u8>) -> Result<Vec<u8>, anyhow::Error> {
 impl ObjectDb {
     pub fn new() -> Self {
         Self {}
+    }
+
+    pub fn get_blobs(
+        self: &Self,
+        content_addresses: Vec<ContentAddress>
+    ) -> Result<Vec<StoredObject>, anyhow::Error> {
+        todo!()
     }
 
     pub fn store_object(
